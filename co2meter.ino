@@ -9,6 +9,10 @@
 #include <SoftwareSerial.h>
 #include "Bounce2.h"
 
+#include <DNSServer.h>
+#include <ESP8266WebServer.h>
+#include "WiFiManager.h"
+
 /*
 TM1637 -> NodeMCU v3
 CLK -> D6;
@@ -21,9 +25,6 @@ DIO -> 9;
 GND -> GND;
 VCC -> 3V3;
 */
-
-const char* WIFI_SSID = "";
-const char* WIFI_PASSWD = "";
 
 const byte MODE_BUTTON_PIN = 0;
 
@@ -63,6 +64,7 @@ const byte LED_BRIGHTNESS = 7;
 
 Bounce debouncer; 
 
+WiFiManager wifiManager;
 WiFiUDP udp;
 IPAddress ntpServerIP;
 
@@ -141,25 +143,6 @@ unsigned long getFromNTP() {
   unsigned long highWord = word(ntpPacketBuffer[40], ntpPacketBuffer[41]);
   unsigned long lowWord = word(ntpPacketBuffer[42], ntpPacketBuffer[43]);
   return (unsigned long) highWord << 16 | lowWord;
-}
-
-void waitForWifiConnection() {
-  Serial.print("Connecting");
-  byte retries = 0;
-  while (WiFi.status() != WL_CONNECTED && (retries < MAX_WIFI_CONNECT_DELAY)) {
-    retries++;
-    delay(500);
-    Serial.print(".");
-  }
-  if (WiFi.status() == WL_CONNECTED) {
-    Serial.println("");
-    Serial.println("WiFi connected");
-    Serial.println("IP address: ");
-    Serial.println(WiFi.localIP());
-  }
-  else {
-    restart();
-  }
 }
 
 double getCo2Data() {
@@ -311,12 +294,8 @@ void setup() {
   ledDisplayInit();
   co2SensorInit();
   
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(WIFI_SSID, WIFI_PASSWD);
+  wifiManager.autoConnect("CO2Meter");
   
-  waitForWifiConnection();
-
-  delay(1000);
   setSyncProvider(getNTPtime);
   setSyncInterval(NTP_SERVER_UPDATE_INTERVAL);
 
